@@ -1,21 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 const API_BASE_URL = "http://localhost:8080/api/tasks";
 
-const emptyForm = {
-  description: "",
-  dueDate: "",
-  done: false
-};
-
 function App() {
   const [tasks, setTasks] = useState([]);
-  const [form, setForm] = useState(emptyForm);
+  const [modalOpen, setModalOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState(null);
+  const [modalDescription, setModalDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const isEditing = useMemo(() => editingTaskId !== null, [editingTaskId]);
+  const isEditing = editingTaskId !== null;
 
   const loadTasks = async () => {
     setLoading(true);
@@ -39,16 +34,44 @@ function App() {
     loadTasks();
   }, []);
 
-  const resetForm = () => {
-    setForm(emptyForm);
+  const closeModal = () => {
+    setModalOpen(false);
     setEditingTaskId(null);
+    setModalDescription("");
   };
 
-  const handleSubmit = async (event) => {
+  const openAddModal = () => {
+    setError("");
+    setEditingTaskId(null);
+    setModalDescription("");
+    setModalOpen(true);
+  };
+
+  const startEdit = (task) => {
+    setError("");
+    setEditingTaskId(task.id);
+    setModalDescription(task.description ?? "");
+    setModalOpen(true);
+  };
+
+  useEffect(() => {
+    if (!modalOpen) return;
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        closeModal();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [modalOpen]);
+
+  const handleModalSubmit = async (event) => {
     event.preventDefault();
     setError("");
 
-    if (!form.description.trim()) {
+    if (!modalDescription.trim()) {
       setError("Description is required.");
       return;
     }
@@ -56,17 +79,33 @@ function App() {
     const requestMethod = isEditing ? "PUT" : "POST";
     const requestUrl = isEditing ? `${API_BASE_URL}/${editingTaskId}` : API_BASE_URL;
 
+    const taskBeingEdited = isEditing ? tasks.find((t) => t.id === editingTaskId) : null;
+    if (isEditing && !taskBeingEdited) {
+      setError("Task no longer exists.");
+      closeModal();
+      await loadTasks();
+      return;
+    }
+
+    const body = isEditing
+      ? {
+          description: modalDescription.trim(),
+          done: taskBeingEdited.done,
+          dueDate: taskBeingEdited.dueDate || null
+        }
+      : {
+          description: modalDescription.trim(),
+          done: false,
+          dueDate: null
+        };
+
     try {
       const response = await fetch(requestUrl, {
         method: requestMethod,
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          description: form.description.trim(),
-          done: form.done,
-          dueDate: form.dueDate || null
-        })
+        body: JSON.stringify(body)
       });
 
       if (!response.ok) {
@@ -74,19 +113,10 @@ function App() {
       }
 
       await loadTasks();
-      resetForm();
+      closeModal();
     } catch (err) {
       setError(err.message);
     }
-  };
-
-  const startEdit = (task) => {
-    setEditingTaskId(task.id);
-    setForm({
-      description: task.description ?? "",
-      dueDate: task.dueDate ?? "",
-      done: task.done ?? false
-    });
   };
 
   const handleDelete = async (taskId) => {
@@ -101,7 +131,7 @@ function App() {
       }
       await loadTasks();
       if (editingTaskId === taskId) {
-        resetForm();
+        closeModal();
       }
     } catch (err) {
       setError(err.message);
@@ -130,46 +160,12 @@ function App() {
 
   return (
     <div className="container">
-      <h1>Task Management</h1>
-
-      <form className="task-form" onSubmit={handleSubmit}>
-        <label>
-          Description
-          <input
-            type="text"
-            value={form.description}
-            onChange={(event) => setForm({ ...form, description: event.target.value })}
-            placeholder="Enter task description"
-          />
-        </label>
-
-        <label>
-          Date
-          <input
-            type="date"
-            value={form.dueDate}
-            onChange={(event) => setForm({ ...form, dueDate: event.target.value })}
-          />
-        </label>
-
-        <label className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={form.done}
-            onChange={(event) => setForm({ ...form, done: event.target.checked })}
-          />
-          Done
-        </label>
-
-        <div className="form-actions">
-          <button type="submit">{isEditing ? "Update Task" : "Add Task"}</button>
-          {isEditing ? (
-            <button type="button" className="secondary" onClick={resetForm}>
-              Cancel Edit
-            </button>
-          ) : null}
-        </div>
-      </form>
+      <header className="page-header">
+        <h1>Task Management</h1>
+        <button type="button" onClick={openAddModal}>
+          Add task
+        </button>
+      </header>
 
       {error ? <p className="error">{error}</p> : null}
       {loading ? <p>Loading tasks...</p> : null}
@@ -195,6 +191,44 @@ function App() {
           </li>
         ))}
       </ul>
+
+      {modalOpen ? (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeModal();
+          }}
+        >
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="task-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="task-modal-title">{isEditing ? "Edit task" : "New task"}</h2>
+            <form className="modal-form" onSubmit={handleModalSubmit}>
+              <label>
+                Description
+                <textarea
+                  value={modalDescription}
+                  onChange={(event) => setModalDescription(event.target.value)}
+                  placeholder="Describe the task..."
+                  rows={4}
+                  autoFocus
+                />
+              </label>
+              <div className="form-actions">
+                <button type="submit">Save</button>
+                <button type="button" className="secondary" onClick={closeModal}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

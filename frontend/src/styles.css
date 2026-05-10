@@ -21,25 +21,63 @@ h1 {
   margin-top: 0;
 }
 
-.task-form {
-  display: grid;
-  gap: 12px;
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
   margin-bottom: 16px;
 }
 
-.task-form input[type="text"],
-.task-form input[type="date"] {
+.page-header h1 {
+  margin: 0;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.modal {
+  width: min(100%, 420px);
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+}
+
+.modal h2 {
+  margin: 0 0 16px;
+  font-size: 1.15rem;
+}
+
+.modal-form {
+  display: grid;
+  gap: 12px;
+}
+
+.modal-form label {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.modal-form textarea {
   width: 100%;
-  margin-top: 4px;
+  margin-top: 6px;
   padding: 10px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
-}
-
-.checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-family: inherit;
+  font-size: 1rem;
+  resize: vertical;
+  min-height: 96px;
 }
 
 .form-actions {
