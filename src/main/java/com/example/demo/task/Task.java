@@ -13,15 +13,17 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String description;
+    private String category;
     private boolean done;
     private LocalDate dueDate;
 
     public Task() {
     }
 
-    public Task(Long id, String description, boolean done, LocalDate dueDate) {
+    public Task(Long id, String description, String category, boolean done, LocalDate dueDate) {
         this.id = id;
         this.description = description;
+        this.category = category;
         this.done = done;
         this.dueDate = dueDate;
     }
@@ -40,6 +42,14 @@ public class Task {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 
     public boolean isDone() {

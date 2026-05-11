@@ -61,4 +61,10 @@ public class TaskController {
     public Map<String, String> handleTaskNotFound(TaskNotFoundException ex) {
         return Map.of("error", ex.getMessage());
     }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> handleBadRequest(IllegalArgumentException ex) {
+        return Map.of("error", ex.getMessage());
+    }
 }

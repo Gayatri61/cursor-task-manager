@@ -2,11 +2,16 @@ import { useEffect, useState } from "react";
 
 const API_BASE_URL = "http://localhost:8080/api/tasks";
 
+function normalizeCategoryInput(value) {
+  return value.replace(/[^A-Za-z]/g, "").slice(0, 20);
+}
+
 function App() {
   const [tasks, setTasks] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [modalDescription, setModalDescription] = useState("");
+  const [modalCategory, setModalCategory] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -38,12 +43,14 @@ function App() {
     setModalOpen(false);
     setEditingTaskId(null);
     setModalDescription("");
+    setModalCategory("");
   };
 
   const openAddModal = () => {
     setError("");
     setEditingTaskId(null);
     setModalDescription("");
+    setModalCategory("");
     setModalOpen(true);
   };
 
@@ -51,6 +58,7 @@ function App() {
     setError("");
     setEditingTaskId(task.id);
     setModalDescription(task.description ?? "");
+    setModalCategory(normalizeCategoryInput(task.category ?? ""));
     setModalOpen(true);
   };
 
@@ -76,6 +84,12 @@ function App() {
       return;
     }
 
+    const categoryValue = normalizeCategoryInput(modalCategory);
+    if (!categoryValue) {
+      setError("Category is required (one word, letters only, up to 20 characters).");
+      return;
+    }
+
     const requestMethod = isEditing ? "PUT" : "POST";
     const requestUrl = isEditing ? `${API_BASE_URL}/${editingTaskId}` : API_BASE_URL;
 
@@ -90,11 +104,13 @@ function App() {
     const body = isEditing
       ? {
           description: modalDescription.trim(),
+          category: modalCategory.trim(),
           done: taskBeingEdited.done,
           dueDate: taskBeingEdited.dueDate || null
         }
       : {
           description: modalDescription.trim(),
+          category: modalCategory.trim(),
           done: false,
           dueDate: null
         };
@@ -109,7 +125,16 @@ function App() {
       });
 
       if (!response.ok) {
-        throw new Error(isEditing ? "Could not update task." : "Could not create task.");
+        let message = isEditing ? "Could not update task." : "Could not create task.";
+        try {
+          const errBody = await response.json();
+          if (errBody?.error) {
+            message = errBody.error;
+          }
+        } catch {
+          /* use default message */
+        }
+        throw new Error(message);
       }
 
       await loadTasks();
@@ -175,6 +200,9 @@ function App() {
           <li key={task.id} className={task.done ? "done" : ""}>
             <div>
               <strong>{task.description}</strong>
+              <p className="task-meta">
+                Category: {task.category?.trim() ? task.category : "—"}
+              </p>
               <p>Date: {task.dueDate || "Not set"}</p>
             </div>
             <div className="task-actions">
@@ -210,13 +238,24 @@ function App() {
             <h2 id="task-modal-title">{isEditing ? "Edit task" : "New task"}</h2>
             <form className="modal-form" onSubmit={handleModalSubmit}>
               <label>
+                Category
+                <input
+                  type="text"
+                  value={modalCategory}
+                  onChange={(event) => setModalCategory(normalizeCategoryInput(event.target.value))}
+                  placeholder="e.g. Work"
+                  maxLength={20}
+                  autoComplete="off"
+                  autoFocus
+                />
+              </label>
+              <label>
                 Description
                 <textarea
                   value={modalDescription}
                   onChange={(event) => setModalDescription(event.target.value)}
                   placeholder="Describe the task..."
                   rows={4}
-                  autoFocus
                 />
               </label>
               <div className="form-actions">

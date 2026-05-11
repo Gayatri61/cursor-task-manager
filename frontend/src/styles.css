@@ -68,6 +68,7 @@ h1 {
   font-size: 0.9rem;
 }
 
+.modal-form input[type="text"],
 .modal-form textarea {
   width: 100%;
   margin-top: 6px;
@@ -76,8 +77,16 @@ h1 {
   border-radius: 8px;
   font-family: inherit;
   font-size: 1rem;
+}
+
+.modal-form textarea {
   resize: vertical;
   min-height: 96px;
+}
+
+.task-meta {
+  margin: 6px 0 0;
+  color: #4b5563;
 }
 
 .form-actions {
