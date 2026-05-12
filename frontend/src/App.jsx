@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const API_BASE_URL = "http://localhost:8080/api/tasks";
 
@@ -14,8 +14,29 @@ function App() {
   const [modalCategory, setModalCategory] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
 
   const isEditing = editingTaskId !== null;
+
+  const categoryOptions = useMemo(() => {
+    const seen = new Set();
+    for (const task of tasks) {
+      const c = (task.category ?? "").trim();
+      if (c) seen.add(c);
+    }
+    return [...seen].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    if (!categoryFilter) return tasks;
+    return tasks.filter((task) => (task.category ?? "").trim() === categoryFilter);
+  }, [tasks, categoryFilter]);
+
+  useEffect(() => {
+    if (categoryFilter && !categoryOptions.includes(categoryFilter)) {
+      setCategoryFilter("");
+    }
+  }, [categoryFilter, categoryOptions]);
 
   const loadTasks = async () => {
     setLoading(true);
@@ -104,13 +125,13 @@ function App() {
     const body = isEditing
       ? {
           description: modalDescription.trim(),
-          category: modalCategory.trim(),
+          category: categoryValue,
           done: taskBeingEdited.done,
           dueDate: taskBeingEdited.dueDate || null
         }
       : {
           description: modalDescription.trim(),
-          category: modalCategory.trim(),
+          category: categoryValue,
           done: false,
           dueDate: null
         };
@@ -195,8 +216,33 @@ function App() {
       {error ? <p className="error">{error}</p> : null}
       {loading ? <p>Loading tasks...</p> : null}
 
+      <div className="list-toolbar">
+        <label className="filter-field">
+          <span className="filter-label">Category</span>
+          <select
+            value={categoryFilter}
+            onChange={(event) => setCategoryFilter(event.target.value)}
+            aria-label="Filter tasks by category"
+          >
+            <option value="">All categories</option>
+            {categoryOptions.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       <ul className="task-list">
-        {tasks.map((task) => (
+        {!loading && filteredTasks.length === 0 ? (
+          <li className="task-list-empty">
+            {tasks.length === 0
+              ? "No tasks yet. Add one to get started."
+              : "No tasks in this category."}
+          </li>
+        ) : null}
+        {filteredTasks.map((task) => (
           <li key={task.id} className={task.done ? "done" : ""}>
             <div>
               <strong>{task.description}</strong>
